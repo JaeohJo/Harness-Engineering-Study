@@ -123,6 +123,7 @@ class TaskSpec(BaseModel):
     description: str = Field(description="에이전트에게 전달될 프롬프트/문제 설명")
     repo_path: Optional[str] = Field(default=None, description="대상 소스코드 저장소 경로")
     base_commit: Optional[str] = Field(default=None, description="체크아웃할 베이스 Git 커밋 또는 브랜치")
+    branch: Optional[str] = Field(default=None, description="체크아웃할 Git 브랜치명 (base_commit의 직관적 별칭)")
     test_patch: Optional[str] = Field(default=None, description="문제 재현 및 검증을 위한 테스트 패치")
     golden_patch: Optional[str] = Field(default=None, description="정답 레퍼런스 패치 (선택 사항)")
     test_command: Optional[str] = Field(default=None, description="해결 여부를 검증할 테스트 실행 명령어")

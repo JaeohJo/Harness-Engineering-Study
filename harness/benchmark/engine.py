@@ -58,7 +58,7 @@ class HarnessEngine:
         if repo_path and (repo_path / ".git").exists():
             return GitWorktreeEnvironment(
                 repo_path=repo_path,
-                base_commit=task.base_commit or "HEAD",
+                base_commit=task.branch or task.base_commit or "HEAD",
                 task_id=task.task_id,
                 auto_cleanup=self.config.cleanup_worktree,
             )
