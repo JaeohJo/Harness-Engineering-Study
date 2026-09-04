@@ -48,8 +48,7 @@ class RunnerConfig(BaseModel):
         """비대화형(Headless) agy CLI 호출을 위한 커맨드라인 인자 리스트를 생성합니다."""
         args = [self.agy_bin_path]
 
-        # 1. 비대화형 스트리밍 출력 모드 강제 지정
-        args.append("--print")
+        # 1. 비대화형 스트리밍 출력 형식 지정
         args.extend(["--output-format", "stream-json"])
 
         # 2. 자동화 파이프라인 필수 권한 플래그
@@ -86,7 +85,8 @@ class RunnerConfig(BaseModel):
         # 6. 추가 사용자 정의 플래그 추가
         args.extend(self.extra_flags)
 
-        # 7. 마지막 인자로 프롬프트 전달
+        # 7. 비대화형 실행 플래그 및 프롬프트 전달 (--print 뒤에 바로 프롬프트가 오도록 배치)
+        args.append("--print")
         if prompt:
             args.append(prompt)
 

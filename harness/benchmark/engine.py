@@ -127,11 +127,14 @@ class HarnessEngine:
                 diff=diff,
             )
 
+            task_duration = time.time() - start_time
+            eval_res.duration_seconds = task_duration
+
             # 6. 세션 트랜스크립트로부터 추론 토큰 및 도구 사용 텔레메트리 추출
             telemetry = self.transcript_parser.extract_telemetry(
                 task_id=task.task_id,
                 conversation_id=exec_res.conversation_id,
-                duration_seconds=time.time() - start_time,
+                duration_seconds=task_duration,
             )
             telemetry.files_modified = env.get_modified_files()
 
