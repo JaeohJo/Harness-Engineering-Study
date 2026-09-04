@@ -27,6 +27,12 @@ dev = [
 [project.scripts]
 agy-harness = "harness.cli:main"
 
+[tool.setuptools.packages.find]
+include = ["harness*"]
+
+[tool.setuptools.package-data]
+"harness" = ["guardrails/templates/*", "guardrails/templates/*.py"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

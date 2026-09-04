@@ -1,4 +1,4 @@
-"""Base interface for task evaluation and verification engines."""
+"""평가 및 검증 엔진 기본 인터페이스 정의 모듈."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from harness.core.models import EvalResult, TaskSpec
 
 
 class BaseEvaluator(ABC):
-    """Abstract interface for verifying agent changes on a task."""
+    """태스크별 코드 수정 결과물의 정답 여부를 채점하고 검증하는 추상 인터페이스."""
 
     @abstractmethod
     def evaluate(
@@ -20,5 +20,5 @@ class BaseEvaluator(ABC):
         diff: Optional[str] = None,
         **kwargs,
     ) -> EvalResult:
-        """Evaluates whether the agent's work in the workspace satisfies the task specification."""
+        """에이전트의 작업 결과가 태스크 사양을 만족하는지 검증하고 EvalResult를 반환합니다."""
         pass

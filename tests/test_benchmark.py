@@ -8,13 +8,10 @@ from harness.benchmark.dataset import TaskDataset
 from harness.benchmark.engine import HarnessEngine
 from harness.core.config import HarnessConfig
 from harness.core.models import (
-    EvalResult,
     EvalStatus,
     ExecutionResult,
     TaskSpec,
-    TelemetryData,
 )
-from harness.evaluator.base import BaseEvaluator
 from harness.runner.base import BaseRunner
 
 
@@ -103,3 +100,32 @@ async def test_harness_benchmark_run(tmp_path: Path):
     assert report.pass_rate == 50.0
     assert (output_dir / "benchmark_report.json").exists()
     assert (output_dir / "benchmark_report.md").exists()
+
+
+@pytest.mark.asyncio
+async def test_harness_engine_with_initial_files(tmp_path: Path):
+    task = TaskSpec(
+        task_id="standalone_task",
+        description="Fix sub in calc.py",
+        initial_files={"calc.py": "def sub(a, b): return a + b\n"},
+        test_command="python3 -c 'import calc; assert calc.sub(5, 2) == 3'",
+    )
+
+    mock_runner = MagicMock(spec=BaseRunner)
+
+    async def fake_run(*args, **kwargs):
+        workspace = Path(kwargs.get("workspace_dir") or args[1])
+        # Verify initial_files were populated before runner starts
+        assert (workspace / "calc.py").exists()
+        assert "def sub(a, b): return a + b" in (workspace / "calc.py").read_text()
+        # Simulate agent fix
+        (workspace / "calc.py").write_text("def sub(a, b): return a - b\n")
+        return ExecutionResult(task_id="standalone_task", exit_code=0)
+
+    mock_runner.run = AsyncMock(side_effect=fake_run)
+    engine = HarnessEngine(runner=mock_runner)
+    exec_res, eval_res, telem = await engine.run_task(task)
+
+    assert eval_res.status == EvalStatus.PASS
+    assert telem.lines_added > 0
+    assert telem.lines_removed > 0

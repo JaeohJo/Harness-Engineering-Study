@@ -1,4 +1,4 @@
-"""Base interface for workspace execution environments."""
+"""워크스페이스 실행 환경 인터페이스 정의 모듈."""
 
 from __future__ import annotations
 
@@ -8,31 +8,39 @@ from typing import List, Optional
 
 
 class BaseEnvironment(ABC):
-    """Abstract interface defining the lifecycle of a task workspace environment."""
+    """태스크별 격리된 실행 환경의 수명주기를 정의하는 추상 인터페이스.
+
+    Python 컨텍스트 매니저(`with env:`) 프로토콜을 지원하여 자원의 안전한 할당과 해제를 보장합니다.
+    """
 
     @abstractmethod
     def setup(self) -> Path:
-        """Initializes and isolates the workspace, returning the working directory path."""
+        """워크스페이스를 격리 초기화하고 작업 루트 디렉터리 경로를 반환합니다."""
         pass
 
     @abstractmethod
     def cleanup(self) -> None:
-        """Tears down the isolated workspace and cleans up resources."""
+        """격리된 워크스페이스를 정리하고 임시 자원을 안전하게 반환합니다."""
         pass
 
     @abstractmethod
     def get_diff(self) -> str:
-        """Returns the unified git/file diff representing all modifications made in this workspace."""
+        """해당 워크스페이스에서 발생한 모든 코드 변경사항(Unified Diff)을 반환합니다."""
         pass
 
     @abstractmethod
     def get_modified_files(self) -> List[str]:
-        """Returns a list of relative paths for all files modified, created, or deleted."""
+        """수정, 생성, 삭제된 모든 파일의 상대 경로 목록을 반환합니다."""
         pass
 
     @abstractmethod
     def apply_patch(self, patch_content: str) -> None:
-        """Applies a unified patch to the workspace."""
+        """워크스페이스에 Unified Diff 패치를 적용합니다."""
+        pass
+
+    @abstractmethod
+    def reset_baseline(self) -> None:
+        """사전 파일 주입이나 설정 완료 후, 변경사항 측정의 기준선(baseline)을 현재 상태로 재설정합니다."""
         pass
 
     def __enter__(self) -> BaseEnvironment:

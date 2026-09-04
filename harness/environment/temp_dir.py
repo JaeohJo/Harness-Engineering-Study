@@ -1,4 +1,8 @@
-"""Temporary directory environment for non-git or lightweight directory sandboxing."""
+"""비Git 환경 및 경량 샌드박스를 위한 임시 디렉터리 환경 관리자 모듈.
+
+Git 저장소가 아닌 일반 소스코드 폴더를 임시 디렉터리로 복제하고,
+실행 전후 파일 스냅샷을 비교하여 Diff 및 수정 목록을 산출합니다.
+"""
 
 from __future__ import annotations
 
@@ -13,7 +17,7 @@ from harness.environment.base import BaseEnvironment
 
 
 class LocalTempEnvironment(BaseEnvironment):
-    """Provides a temporary filesystem sandbox by copying files and tracking changes."""
+    """임시 디렉터리 복사 및 파일 변경 비교 기반의 샌드박스 환경 관리자."""
 
     def __init__(
         self,
@@ -30,40 +34,57 @@ class LocalTempEnvironment(BaseEnvironment):
     @property
     def path(self) -> Path:
         if not self._temp_dir:
-            raise RuntimeError("Environment has not been setup yet.")
+            raise RuntimeError("환경이 아직 초기화(setup)되지 않았습니다.")
         return self._temp_dir
 
     def _snapshot_files(self) -> Dict[str, str]:
+        """현재 디렉터리의 모든 파일 내용을 상대 경로와 함께 스냅샷합니다."""
         snapshot = {}
         if not self._temp_dir or not self._temp_dir.exists():
             return snapshot
         for file_path in self._temp_dir.rglob("*"):
             if file_path.is_file():
                 rel_path = file_path.relative_to(self._temp_dir).as_posix()
+                # 하네스 내부 가드레일(.agents) 및 파이썬 캐시 제외
+                if (
+                    rel_path.startswith(".agents")
+                    or rel_path.startswith("__pycache__")
+                    or "/__pycache__/" in rel_path
+                    or rel_path.endswith(".pyc")
+                ):
+                    continue
                 try:
                     snapshot[rel_path] = file_path.read_text(encoding="utf-8", errors="replace")
                 except Exception:
                     pass
         return snapshot
 
+    def reset_baseline(self) -> None:
+        """사전 파일 주입이나 설정 완료 후, 변경사항 측정의 기준선(baseline)을 현재 상태로 재설정합니다."""
+        self._initial_files = self._snapshot_files()
+
     def setup(self) -> Path:
+        """독립된 임시 디렉터리를 생성하고 원본 소스코드를 복제합니다."""
         prefix = f"harness_{self.task_id}_"
         self._temp_dir = Path(tempfile.mkdtemp(prefix=prefix))
 
         if self.source_dir and self.source_dir.exists():
             shutil.copytree(self.source_dir, self._temp_dir, dirs_exist_ok=True)
 
+        # 초기 상태 파일 스냅샷 기록
         self._initial_files = self._snapshot_files()
-        logger.debug(f"Created temp environment at '{self._temp_dir}' with {len(self._initial_files)} files")
+        logger.debug(f"임시 샌드박스 생성 완료: '{self._temp_dir}' (초기 파일 {len(self._initial_files)}개)")
         return self._temp_dir
 
     def cleanup(self) -> None:
+        """임시 디렉터리 전체를 삭제합니다."""
         if self._temp_dir and self._temp_dir.exists() and self.auto_cleanup:
-            logger.debug(f"Removing temp environment at '{self._temp_dir}'")
+            logger.debug(f"임시 샌드박스 삭제: '{self._temp_dir}'")
             shutil.rmtree(self._temp_dir, ignore_errors=True)
             self._temp_dir = None
 
     def get_diff(self) -> str:
+        """초기 스냅샷과 현재 파일들을 비교하여 Unified Diff를 생성합니다."""
         current_files = self._snapshot_files()
         all_keys = sorted(set(self._initial_files.keys()) | set(current_files.keys()))
         diff_lines: List[str] = []
@@ -85,6 +106,7 @@ class LocalTempEnvironment(BaseEnvironment):
         return "".join(diff_lines)
 
     def get_modified_files(self) -> List[str]:
+        """변경된 파일 상대 경로 목록을 반환합니다."""
         current_files = self._snapshot_files()
         all_keys = set(self._initial_files.keys()) | set(current_files.keys())
         modified = []
@@ -96,7 +118,7 @@ class LocalTempEnvironment(BaseEnvironment):
         return modified
 
     def apply_patch(self, patch_content: str) -> None:
-        # Patch application for non-git environments can be done using patch tool if available
+        """patch 명령어를 사용하여 임시 샌드박스에 패치를 적용합니다."""
         if not patch_content.strip() or not self._temp_dir:
             return
         patch_file = self._temp_dir / ".temp_patch"

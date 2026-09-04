@@ -1,4 +1,4 @@
-"""Core modules for Antigravity Harness."""
+"""Antigravity 하네스 코어 모듈 익스포트."""
 
 from harness.core.exceptions import (
     HarnessError,

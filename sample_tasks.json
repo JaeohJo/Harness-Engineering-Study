@@ -1,13 +1,17 @@
 [
   {
     "task_id": "sample_math_fix",
-    "description": "Fix the subtract bug in math_ops.py so that sub(a, b) returns a - b instead of a + b.",
+    "description": "math_ops.py 파일의 뺄셈 버그를 수정하여 sub(a, b)가 a + b 대신 a - b를 반환하도록 하십시오.",
     "repo_path": null,
     "base_commit": null,
     "test_patch": null,
     "golden_patch": null,
     "test_command": "python3 -c 'import math_ops; assert math_ops.sub(10, 3) == 7'",
     "timeout_seconds": null,
+    "initial_files": {
+      "math_ops.py": "def add(a, b):\n    return a + b\n\ndef sub(a, b):\n    return a + b  # 버그: 뺄셈 대신 덧셈이 구현되어 있음\n"
+    },
+    "setup_command": null,
     "metadata": {}
   }
 ]
