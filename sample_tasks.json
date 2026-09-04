@@ -1,0 +1,13 @@
+[
+  {
+    "task_id": "sample_math_fix",
+    "description": "Fix the subtract bug in math_ops.py so that sub(a, b) returns a - b instead of a + b.",
+    "repo_path": null,
+    "base_commit": null,
+    "test_patch": null,
+    "golden_patch": null,
+    "test_command": "python3 -c 'import math_ops; assert math_ops.sub(10, 3) == 7'",
+    "timeout_seconds": null,
+    "metadata": {}
+  }
+]

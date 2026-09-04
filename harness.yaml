@@ -1,0 +1,13 @@
+output_dir: reports
+runner:
+  model: null
+  effort: null
+  mode: accept-edits
+  dangerously_skip_permissions: true
+  sandbox: false
+  timeout_seconds: 300.0
+  agy_bin_path: agy
+  extra_flags: []
+cleanup_worktree: true
+enable_guardrails: true
+concurrency: 1

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "antigravity-harness"
+version = "0.1.0"
+description = "Production-grade Harness Engineering framework for Antigravity CLI"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Antigravity Harness Team" }
+]
+dependencies = [
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-mock>=3.12",
+]
+
+[project.scripts]
+agy-harness = "harness.cli:main"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]

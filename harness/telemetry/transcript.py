@@ -1,0 +1,119 @@
+"""Parser for Antigravity Brain transcripts (JSONL)."""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from harness.core.logging import logger
+from harness.core.models import TelemetryData
+
+
+class TranscriptStep:
+    """Represents a single step in the Antigravity conversation transcript."""
+
+    def __init__(self, data: Dict[str, Any]):
+        self.raw = data
+        self.step_index: int = data.get("step_index", 0)
+        self.source: str = data.get("source", "")
+        self.step_type: str = data.get("type", "")
+        self.created_at: str = data.get("created_at", "")
+        self.content: str = data.get("content", "") or ""
+        self.thinking: str = data.get("thinking", "") or ""
+        self.tool_calls: List[Dict[str, Any]] = data.get("tool_calls") or []
+        self.status: str = data.get("status", "")
+
+
+class TranscriptParser:
+    """Locates and parses transcript.jsonl files created during agent sessions."""
+
+    def __init__(self, app_data_dir: Optional[str | Path] = None):
+        if app_data_dir:
+            self.app_data_dir = Path(app_data_dir)
+        else:
+            home = Path.home()
+            self.app_data_dir = home / ".gemini" / "antigravity-cli"
+
+    def find_transcript_path(self, conversation_id: str) -> Optional[Path]:
+        """Locates the transcript.jsonl file for the given conversation ID."""
+        candidate = (
+            self.app_data_dir
+            / "brain"
+            / conversation_id
+            / ".system_generated"
+            / "logs"
+            / "transcript.jsonl"
+        )
+        if candidate.exists():
+            return candidate
+        return None
+
+    def parse_file(self, file_path: str | Path) -> List[TranscriptStep]:
+        """Parses a transcript JSONL file into a list of TranscriptStep objects."""
+        path = Path(file_path).resolve()
+        if not path.exists():
+            logger.warning(f"Transcript file not found: {path}")
+            return []
+
+        steps: List[TranscriptStep] = []
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line_str = line.strip()
+                if not line_str:
+                    continue
+                try:
+                    data = json.loads(line_str)
+                    if isinstance(data, dict):
+                        steps.append(TranscriptStep(data))
+                except json.JSONDecodeError:
+                    continue
+
+        return steps
+
+    def extract_telemetry(
+        self,
+        task_id: str,
+        conversation_id: Optional[str] = None,
+        transcript_path: Optional[str | Path] = None,
+        duration_seconds: float = 0.0,
+    ) -> TelemetryData:
+        """Extracts aggregated telemetry metrics from the conversation transcript."""
+        target_path = Path(transcript_path) if transcript_path else None
+        if not target_path and conversation_id:
+            target_path = self.find_transcript_path(conversation_id)
+
+        steps = self.parse_file(target_path) if target_path else []
+
+        total_turns = len(steps)
+        thinking_chars = 0
+        tool_counts: Dict[str, int] = {}
+        tool_errors: Dict[str, int] = {}
+
+        for step in steps:
+            if step.thinking:
+                thinking_chars += len(step.thinking)
+
+            for call in step.tool_calls:
+                call_name = call.get("tool_name") or call.get("name") or "unknown_tool"
+                tool_counts[call_name] = tool_counts.get(call_name, 0) + 1
+
+            if step.status and step.status.lower() in ("error", "failed"):
+                step_name = step.step_type or "step_error"
+                tool_errors[step_name] = tool_errors.get(step_name, 0) + 1
+
+        total_tool_calls = sum(tool_counts.values())
+        # Roughly 4 characters per token estimate for thinking tokens
+        estimated_thinking_tokens = thinking_chars // 4
+
+        return TelemetryData(
+            task_id=task_id,
+            conversation_id=conversation_id,
+            duration_seconds=duration_seconds,
+            total_turns=total_turns,
+            thinking_token_count=estimated_thinking_tokens,
+            total_tool_calls=total_tool_calls,
+            tool_call_counts=tool_counts,
+            tool_error_counts=tool_errors,
+        )
